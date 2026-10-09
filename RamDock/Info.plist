@@ -28,5 +28,13 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/simonsruggi/RamDock/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>YhqibkoYNFRlULx9zJDQXE7SuBTAO3csjAKD2Hjm9NE=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>21600</integer>
 </dict>
 </plist>

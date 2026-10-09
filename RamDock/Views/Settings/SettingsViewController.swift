@@ -37,6 +37,11 @@ final class SettingsViewController: NSViewController {
         syncControls()
     }
 
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        (view.subviews.compactMap { $0 as? NSScrollView }.first?.documentView)?.scroll(.zero)
+    }
+
     // MARK: Layout
 
     private func header() -> NSView {
@@ -48,7 +53,7 @@ final class SettingsViewController: NSViewController {
         back.widthAnchor.constraint(equalToConstant: 22).isActive = true
         back.heightAnchor.constraint(equalToConstant: 22).isActive = true
 
-        let row = hStack([back, makeLabel("Settings", size: 13, weight: .semibold), spacer()], spacing: 6,
+        let row = hStack([back, makeLabel("Settings", size: 13, weight: .semibold), spacer(), BrandView()], spacing: 6,
                          insets: NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10))
         row.heightAnchor.constraint(equalToConstant: 44).isActive = true
         return row
@@ -77,7 +82,7 @@ final class SettingsViewController: NSViewController {
             settingRow("Labels", [labelSwatches]),
             settingRow("Values", [valueSwatches]),
         ])
-        let content = vStack([menuBar, MacInfoCardView()], spacing: 16,
+        let content = vStack([menuBar, AboutCardView(), MacInfoCardView()], spacing: 16,
                              insets: NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14))
         fillWidth(content.arrangedSubviews, of: content)
 
@@ -90,6 +95,7 @@ final class SettingsViewController: NSViewController {
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.drawsBackground = false
+        scroll.automaticallyAdjustsContentInsets = false
         scroll.documentView = document
         NSLayoutConstraint.activate([
             document.topAnchor.constraint(equalTo: scroll.contentView.topAnchor),

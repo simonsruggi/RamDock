@@ -102,13 +102,15 @@ final class ProcessListViewController: NSViewController, NSTableViewDataSource, 
         errorLabel.lineBreakMode = .byTruncatingTail
         errorLabel.setContentCompressionResistancePriority(.init(10), for: .horizontal)
 
-        let quit = NSButton(title: "Quit RamDock", target: NSApp, action: #selector(NSApplication.terminate(_:)))
+        let quit = NSButton(title: "Quit", target: NSApp, action: #selector(NSApplication.terminate(_:)))
         quit.isBordered = false
         quit.font = .systemFont(ofSize: 11)
         quit.contentTintColor = .secondaryLabelColor
 
-        return hStack([errorLabel, spacer(), quit], spacing: 8,
-                      insets: NSEdgeInsets(top: 6, left: 12, bottom: 6, right: 12))
+        errorLabel.alignment = .center
+        errorLabel.setContentHuggingPriority(.init(1), for: .horizontal)
+        return hStack([BrandView(), errorLabel, quit], spacing: 10,
+                      insets: NSEdgeInsets(top: 7, left: 12, bottom: 7, right: 12))
     }
 
     // MARK: Data

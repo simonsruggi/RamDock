@@ -1,20 +1,55 @@
-# RamDock
+# RamDock — architecture notes
 
-App macOS da barra dei menu (in alto a destra, niente icona nel Dock: `LSUIElement`). Nella barra: `RAM xx%  CPU yy%` di sistema, con le percentuali colorate dal verde al rosso; al clic, popover con CPU e RAM dei processi e bottone per chiuderli.
+Menu bar app (`LSUIElement`, no Dock icon). The status item shows system-wide `RAM xx%  CPU yy%`; clicking it opens a panel with per-process CPU and memory and a button to quit each process.
 
-- Barra: `NSStatusItem` con `attributedTitle` (un `MenuBarExtra` rende l'etichetta come template monocromatico e perde i colori), aggiornata ogni 3 s da `SystemStats`: RAM = app + wired + compressa ("Memoria utilizzata" di Monitoraggio Attività), CPU = media di tutti i core da `HOST_CPU_LOAD_INFO`. Colore in `LoadColor`: RAM verde fino al 50%, rossa dal 92%; CPU verde fino al 15%, rossa dall'85%.
+## Layout
 
-- Pannello ordinato per RAM di default .
-- **AppKit puro, niente SwiftUI** (dal 09/10, la versione SwiftUI è nel branch `swiftui`). Il pannello è un `DropdownPanel` (`NSPanel` borderless + `NSVisualEffectView` `.popover`) agganciato sotto l'icona, che si chiude con un clic fuori (monitor globale) o con Esc. SPM, zero dipendenze, macOS 14+.
-- Dati: `proc_listallpids` + `proc_pid_rusage(RUSAGE_INFO_V4)`. CPU % = delta user+system tra due campioni (2 s), come Monitoraggio Attività (100% = un core); RAM = `ri_phys_footprint` (colonna "Memoria" di Monitoraggio Attività).
-- Campiona i processi **solo a pannello aperto**, avviato e fermato dai delegate di `NSPopover` (un popover chiuso tiene viva la vista, quindi `onDisappear` di SwiftUI non scatta mai: era la causa di un campionamento continuo). Alla chiusura il contenuto del popover viene distrutto e cache/lista svuotate. Il titolo della barra si riassegna solo se cambia. Misurato 09/10: a riposo ~0,13 s di CPU al minuto (~0,2% di un core), ~44 MB di footprint.
-- Visibili solo i processi dell'utente (quelli di root/altri utenti `proc_pid_rusage` non li legge e comunque non si possono chiudere senza privilegi).
-- Chiusura: ✕ = SIGTERM, ⌥+clic o menu contestuale "Forza chiusura" = SIGKILL.
-- Build: `./build-app.sh --install` → `build/RamDock.app` universale, firmata Developer ID se c'è, copiata in `/Applications`.
-- Icona: `swift icon/make-icon.swift out.png` → iconset → `RamDock/Resources/AppIcon.icns`.
-- Interfaccia **solo in inglese** (`CFBundleDevelopmentRegion` en). I nomi delle app vengono da `NSRunningApplication.localizedName`, quindi seguono la lingua di sistema (es. "Terminale").
-- **Settings** (ingranaggio accanto alla ricerca): cosa mostra la barra, `BarDisplay` = RAM and CPU / RAM only / CPU only, chiave `barDisplay` in UserDefaults. La barra si ridisegna subito via `UserDefaults.didChangeNotification` con gli ultimi valori campionati.
-- Settings → **Menu bar**: anche dimensione del testo (9–18 pt, `barFontSize`), colore delle etichette (`barLabelColor`, "" = System) e dei valori (`barValueColor`, "" = By load, cioè verde→rosso). Colori salvati come `#RRGGBB` in sRGB (`BarStyle`).
-- Settings → **This Mac** (`MacInfo`): modello commerciale da `IODeviceTree:/product` `product-name`, chip da `machdep.cpu.brand_string`, core per livello da `hw.perflevelN.*`, GPU e core da `AGXAccelerator` (`model`, `gpu-core-count`), RAM, disco libero/totale, macOS e build, uptime. Letti una volta all'apertura, in background.
-- **Design delle Settings** (rifatte 09/10 perché il `Form` grouped era brutto): niente `Form` né popup, ma card su misura (`SettingsCard`), anteprima live della barra (`BarPreview`, legge `BarReadings` condiviso con lo status item), controllo segmentato Both/RAM/CPU, colori come pallini (`ColorSwatches`: automatico + 7 preset + pallino arcobaleno che apre `NSColorPanel` via `ColorPanelBridge`; il `ColorPicker` SwiftUI su macOS 26+ è una pillola larga), scheda Mac con riquadri (`SpecTile`) e barra del disco. Numeri in formato inglese.
-- **Memoria, cosa pesa davvero** (misurato 09/10 con `footprint`). Non era SwiftUI: un `NSPopover` **vuoto** lascia ~28 MB dopo la prima apertura, mentre un `NSPanel` traslucido con campi di testo ne usa 18. Per questo niente `NSPopover`. Anche `NSRunningApplication(processIdentifier:)` chiamato per ogni pid lasciava ~6 MB: i nomi arrivano da un solo `NSWorkspace.runningApplications` per aggiornamento, e le icone sono ridotte a bitmap da 36 px. Risultato: 13 MB all'avvio, ~27-35 MB dopo aver usato il pannello (SwiftUI+popover: 44-50 MB), CPU a riposo ~0,15 s/min.
+- `main.swift` — starts `NSApplication` with `StatusBarController` as delegate. Pure AppKit, no SwiftUI.
+- `MenuBar/StatusBarController` — status item, 3 s timer, opens/closes the panel.
+- `MenuBar/DropdownPanel` — the panel: a borderless `NSPanel` with an `NSVisualEffectView` (`.popover` material), anchored under the status item, closed by a click in another app (global event monitor) or Esc.
+- `Views/PanelViewController` — swaps the process list and Settings.
+- `Views/List/*` — process list (`NSTableView`, reused `ProcessCellView` rows, context menu).
+- `Views/Settings/*` — settings cards, live preview of the status item, color swatches, About, This Mac.
+- `Services/*` — everything that isn't a view: sampling, system stats, colors, settings storage, Sparkle, launch at login, hardware info.
+
+## Data
+
+- **Status item**: `SystemStats` every 3 s. RAM = app memory + wired + compressed (Activity Monitor's "Memory Used"); CPU = average of all cores from `HOST_CPU_LOAD_INFO`. `BarTitle` builds the attributed string for both the status item and the Settings preview; the title is only reassigned when it changes.
+- **Colors** (`LoadColor`): RAM green up to 50%, red from 92%; CPU green up to 15%, red from 85%.
+- **Processes** (`ProcessSampler`): `proc_listallpids` + `proc_pid_rusage(RUSAGE_INFO_V4)` every 2 s, **only while the panel is open**. CPU % = delta of user+system time between two samples (100% = one core, as in Activity Monitor); memory = `ri_phys_footprint` (Activity Monitor's "Memory" column). Only the current user's processes are readable without privileges, and only those can be quit anyway.
+- **Names**: one `NSWorkspace.runningApplications` call per refresh for registered apps, `proc_pidpath` / `proc_name` for everything else. Icons are flattened to 36 px bitmaps (`IconCache`).
+- **Quit**: ✕ sends SIGTERM; ⌥-click or "Force Quit" sends SIGKILL.
+
+## Settings (UserDefaults)
+
+| Key | Values |
+|---|---|
+| `barDisplay` | `both`, `memory`, `cpu` |
+| `barFontSize` | 9–18 (default 12) |
+| `barLabelColor` | `""` = system, or `#RRGGBB` |
+| `barValueColor` | `""` = by load, or `#RRGGBB` |
+| `sortKey` | `RAM`, `CPU` |
+
+The status item redraws on `UserDefaults.didChangeNotification`, using the last sampled values.
+
+## Hardware info (`MacInfo`)
+
+Marketing model from `IODeviceTree:/product` → `product-name`; chip from `machdep.cpu.brand_string`; cores per cluster from `hw.perflevelN.*`; GPU name and core count from the `AGXAccelerator` service (`model`, `gpu-core-count`); disk from the root volume's resource values. Read once, off the main thread.
+
+## Why it's this light
+
+Measured with `footprint`:
+
+- An `NSPopover` keeps ~25 MB alive after its first open **even with an empty view**; a translucent `NSPanel` with real controls costs ~18 MB. Hence `DropdownPanel` instead of `NSPopover`.
+- SwiftUI was not the main cost, but AppKit avoids its caches; the SwiftUI version lives in the `swiftui` branch for reference.
+- Calling `NSRunningApplication(processIdentifier:)` for each of ~600 pids left ~6 MB behind; one `runningApplications` call per refresh doesn't.
+- A closed `NSPopover` keeps its SwiftUI view alive, so `onDisappear` never fired and sampling ran forever: sampling is now started and stopped by the panel itself, and the panel is rebuilt on every open and released on close.
+
+Result: ~13 MB at launch, ~27–35 MB after using the panel, ~0.15 s of CPU per minute while closed.
+
+## Build and release
+
+- `./build-app.sh [--install]` → universal `build/RamDock.app`, signed with a Developer ID when available (ad-hoc otherwise), optionally copied to `/Applications`.
+- `RAMDOCK_SCREENSHOT=1` renders the panel opaque, for README screenshots.
+- `./release.sh <version> <build>` (local, gitignored): build, sign (Sparkle framework inside out), notarize, staple, Sparkle EdDSA signature, `appcast.xml`, GitHub release, Homebrew cask bump. Release notes go in `release-notes/<version>.html`.
+- Icon: `swift icon/make-icon.swift out.png` → iconset → `RamDock/Resources/AppIcon.icns`.

@@ -18,7 +18,11 @@ final class DropdownPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .transient]
 
         let background = NSVisualEffectView(frame: NSRect(origin: .zero, size: Self.size))
-        background.material = .popover
+        // RAMDOCK_SCREENSHOT=1 renders an opaque panel for README screenshots, so
+        // nothing on the desktop shows through the translucency.
+        let screenshotMode = ProcessInfo.processInfo.environment["RAMDOCK_SCREENSHOT"] != nil
+        background.material = screenshotMode ? .windowBackground : .popover
+        background.blendingMode = screenshotMode ? .withinWindow : .behindWindow
         background.state = .active
         background.wantsLayer = true
         background.layer?.cornerRadius = 12

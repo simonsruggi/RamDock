@@ -4,7 +4,15 @@ import PackageDescription
 let package = Package(
     name: "RamDock",
     platforms: [.macOS(.v14)],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
+    ],
     targets: [
-        .executableTarget(name: "RamDock", path: "RamDock", exclude: ["Info.plist", "Resources"]),
+        .executableTarget(
+            name: "RamDock",
+            dependencies: [.product(name: "Sparkle", package: "Sparkle")],
+            path: "RamDock",
+            exclude: ["Info.plist", "Resources"]
+        ),
     ]
 )

@@ -12,6 +12,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     private var lastTitle: NSAttributedString?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Updater.start()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.target = self
         statusItem.button?.action = #selector(togglePanel)
