@@ -52,8 +52,7 @@ struct ProcessListView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
-        .onAppear { sampler.start(); rebuild() }
-        .onDisappear { sampler.stop() }
+        .onAppear { rebuild() }
         .onChange(of: sampler.entries) { rebuild() }
         .onChange(of: sortKey) { rebuild() }
         .onChange(of: search) { rebuild() }

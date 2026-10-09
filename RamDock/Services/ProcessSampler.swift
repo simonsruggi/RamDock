@@ -15,9 +15,6 @@ final class ProcessSampler {
     @ObservationIgnored private var previousWall: UInt64 = 0
     @ObservationIgnored private var names: [pid_t: (start: UInt64, name: String, isApp: Bool)] = [:]
     @ObservationIgnored private var timer: Timer?
-    /// The menu bar panel can appear again before the previous one disappears,
-    /// so start/stop are counted instead of toggling the timer directly.
-    @ObservationIgnored private var viewers = 0
     @ObservationIgnored private let queue = DispatchQueue(label: "ramdock.sampler", qos: .utility)
     @ObservationIgnored private let timebase: (numer: UInt64, denom: UInt64) = {
         var info = mach_timebase_info_data_t()
@@ -26,9 +23,10 @@ final class ProcessSampler {
     }()
 
     func start(interval: TimeInterval = 2) {
-        viewers += 1
         guard timer == nil else { return }
         refresh()
+        // CPU % needs two samples: take the second one quickly so the list isn't all 0% on open.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.refresh() }
         let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in self?.refresh() }
         t.tolerance = interval * 0.25
         RunLoop.main.add(t, forMode: .common)
@@ -36,10 +34,19 @@ final class ProcessSampler {
     }
 
     func stop() {
-        viewers = max(0, viewers - 1)
-        guard viewers == 0 else { return }
         timer?.invalidate()
         timer = nil
+        // Free everything while the panel is closed; the next open starts clean.
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.previous = [:]
+            self.previousWall = 0
+            self.names = [:]
+            DispatchQueue.main.async {
+                self.entries = []
+                IconCache.prune(keeping: [])
+            }
+        }
     }
 
     func refresh() {

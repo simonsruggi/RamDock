@@ -3,13 +3,14 @@ import SwiftUI
 
 /// Status item with the live RAM/CPU percentages (an NSStatusItem rather than a
 /// MenuBarExtra, which renders its label as a monochrome template and drops colors).
-final class StatusBarController: NSObject, NSApplicationDelegate {
+final class StatusBarController: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
     private let popover = NSPopover()
     private let sampler = ProcessSampler()
     private let stats = SystemStats()
     private var timer: Timer?
     private let readings = BarReadings()
+    private var lastTitle: NSAttributedString?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -18,11 +19,11 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.contentSize = NSSize(width: 440, height: 520)
-        popover.contentViewController = NSHostingController(rootView: RootView(sampler: sampler, readings: readings))
+        popover.delegate = self
 
         sample()
         let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in self?.sample() }
-        t.tolerance = 0.5
+        t.tolerance = 1
         RunLoop.main.add(t, forMode: .common)
         timer = t
 
@@ -35,10 +36,19 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
+            // Built on every open and dropped on close: a closed NSPopover keeps its
+            // view alive, so SwiftUI's onDisappear never fires and nothing is freed.
+            popover.contentViewController = NSHostingController(rootView: RootView(sampler: sampler, readings: readings))
+            sampler.start()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
             NSApp.activate()
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        sampler.stop()
+        popover.contentViewController = nil
     }
 
     private func sample() {
@@ -65,6 +75,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
             title.append(NSAttributedString(string: display == .both ? "  CPU " : "CPU ", attributes: label))
             title.append(value(readings.cpu, .cpu))
         }
+        guard title != lastTitle else { return }
+        lastTitle = title
         statusItem.button?.attributedTitle = title
     }
 }

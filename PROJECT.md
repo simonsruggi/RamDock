@@ -7,7 +7,7 @@ App macOS da barra dei menu (in alto a destra, niente icona nel Dock: `LSUIEleme
 - Pannello ordinato per RAM di default .
 - Popover SwiftUI (`NSPopover` + `NSHostingController`), SPM, zero dipendenze, macOS 14+.
 - Dati: `proc_listallpids` + `proc_pid_rusage(RUSAGE_INFO_V4)`. CPU % = delta user+system tra due campioni (2 s), come Monitoraggio Attività (100% = un core); RAM = `ri_phys_footprint` (colonna "Memoria" di Monitoraggio Attività).
-- Campiona **solo a pannello aperto** (`onAppear`/`onDisappear`): chiuso resta solo il titolo della barra ogni 3 s.
+- Campiona i processi **solo a pannello aperto**, avviato e fermato dai delegate di `NSPopover` (un popover chiuso tiene viva la vista, quindi `onDisappear` di SwiftUI non scatta mai: era la causa di un campionamento continuo). Alla chiusura il contenuto del popover viene distrutto e cache/lista svuotate. Il titolo della barra si riassegna solo se cambia. Misurato 09/10: a riposo ~0,13 s di CPU al minuto (~0,2% di un core), ~44 MB di footprint.
 - Visibili solo i processi dell'utente (quelli di root/altri utenti `proc_pid_rusage` non li legge e comunque non si possono chiudere senza privilegi).
 - Chiusura: ✕ = SIGTERM, ⌥+clic o menu contestuale "Forza chiusura" = SIGKILL.
 - Build: `./build-app.sh --install` → `build/RamDock.app` universale, firmata Developer ID se c'è, copiata in `/Applications`.
