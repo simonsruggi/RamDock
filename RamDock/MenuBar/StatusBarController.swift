@@ -9,8 +9,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     private let sampler = ProcessSampler()
     private let stats = SystemStats()
     private var timer: Timer?
-    private var lastRAM = 0.0
-    private var lastCPU = 0.0
+    private let readings = BarReadings()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -19,7 +18,7 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.contentSize = NSSize(width: 440, height: 520)
-        popover.contentViewController = NSHostingController(rootView: RootView(sampler: sampler))
+        popover.contentViewController = NSHostingController(rootView: RootView(sampler: sampler, readings: readings))
 
         sample()
         let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in self?.sample() }
@@ -43,8 +42,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     }
 
     private func sample() {
-        lastRAM = stats.memoryUsage()
-        lastCPU = stats.cpuUsage()
+        readings.ram = stats.memoryUsage()
+        readings.cpu = stats.cpuUsage()
         renderTitle()
     }
 
@@ -60,11 +59,11 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         let title = NSMutableAttributedString()
         if display != .cpu {
             title.append(NSAttributedString(string: "RAM ", attributes: label))
-            title.append(value(lastRAM, .memory))
+            title.append(value(readings.ram, .memory))
         }
         if display != .memory {
             title.append(NSAttributedString(string: display == .both ? "  CPU " : "CPU ", attributes: label))
-            title.append(value(lastCPU, .cpu))
+            title.append(value(readings.cpu, .cpu))
         }
         statusItem.button?.attributedTitle = title
     }

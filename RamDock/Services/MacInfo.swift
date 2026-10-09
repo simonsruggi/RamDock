@@ -3,72 +3,73 @@ import IOKit
 
 struct MacInfo {
     let model: String
+    let isLaptop: Bool
     let chip: String
-    let cpuCores: String
-    let gpu: String
-    let memory: String
-    let storage: String
+    let cpuCores: Int
+    let cpuBreakdown: String?
+    let gpuName: String
+    let gpuCores: Int?
+    let memoryBytes: Int64
+    let diskTotal: Int64
+    let diskFree: Int64
     let macOS: String
-    let uptime: String
+    let uptime: TimeInterval
 
     static func load() -> MacInfo {
         let process = ProcessInfo.processInfo
-        let bytes = ByteCountFormatter()
-        bytes.countStyle = .memory
+        let chip = sysctlString("machdep.cpu.brand_string") ?? "Unknown"
+        let model = productName() ?? sysctlString("hw.model") ?? "Mac"
 
-        let chip = sysctlString("machdep.cpu.brand_string") ?? "—"
         var gpuName = chip
         var gpuCores: Int?
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AGXAccelerator"))
         if service != 0 {
-            gpuCores = IORegistryEntryCreateCFProperty(service, "gpu-core-count" as CFString, kCFAllocatorDefault, 0)?
-                .takeRetainedValue() as? Int
-            if let m = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0)?
-                .takeRetainedValue() as? String { gpuName = m }
+            gpuCores = property(service, "gpu-core-count") as? Int
+            if let m = property(service, "model") as? String { gpuName = m }
             IOObjectRelease(service)
         }
 
-        var storage = "—"
-        if let values = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityForImportantUsageKey]),
-           let total = values.volumeTotalCapacity, let free = values.volumeAvailableCapacityForImportantUsage {
-            let disk = ByteCountFormatter()
-            disk.countStyle = .file
-            storage = "\(disk.string(fromByteCount: free)) free of \(disk.string(fromByteCount: Int64(total)))"
-        }
-
+        let disk = try? URL(fileURLWithPath: "/").resourceValues(
+            forKeys: [.volumeTotalCapacityKey, .volumeAvailableCapacityForImportantUsageKey])
         let os = process.operatingSystemVersion
-        let uptime = DateComponentsFormatter()
-        uptime.allowedUnits = [.day, .hour, .minute]
-        uptime.unitsStyle = .abbreviated
+        var version = "\(os.majorVersion).\(os.minorVersion)"
+        if os.patchVersion > 0 { version += ".\(os.patchVersion)" }
 
         return MacInfo(
-            model: productName() ?? sysctlString("hw.model") ?? "Mac",
+            model: model,
+            isLaptop: model.localizedCaseInsensitiveContains("book"),
             chip: chip,
-            cpuCores: cpuCoreSummary(total: process.processorCount),
-            gpu: gpuCores.map { "\(gpuName), \($0) cores" } ?? gpuName,
-            memory: bytes.string(fromByteCount: Int64(process.physicalMemory)),
-            storage: storage,
-            macOS: "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion) (\(sysctlString("kern.osversion") ?? "?"))",
-            uptime: uptime.string(from: process.systemUptime) ?? "—"
+            cpuCores: process.processorCount,
+            cpuBreakdown: cpuBreakdown(),
+            gpuName: gpuName,
+            gpuCores: gpuCores,
+            memoryBytes: Int64(process.physicalMemory),
+            diskTotal: Int64(disk?.volumeTotalCapacity ?? 0),
+            diskFree: disk?.volumeAvailableCapacityForImportantUsage ?? 0,
+            macOS: "macOS \(version) (\(sysctlString("kern.osversion") ?? "?"))",
+            uptime: process.systemUptime
         )
     }
 
-    private static func cpuCoreSummary(total: Int) -> String {
+    /// "4 Super · 6 Efficiency" on chips with more than one core type.
+    private static func cpuBreakdown() -> String? {
         let levels = sysctlInt("hw.nperflevels") ?? 1
-        guard levels > 1 else { return "\(total) cores" }
-        let parts = (0..<levels).compactMap { i -> String? in
+        guard levels > 1 else { return nil }
+        return (0..<levels).compactMap { i -> String? in
             guard let n = sysctlInt("hw.perflevel\(i).physicalcpu") else { return nil }
             return "\(n) \(sysctlString("hw.perflevel\(i).name") ?? "")".trimmingCharacters(in: .whitespaces)
-        }
-        return "\(total) cores (\(parts.joined(separator: " + ")))"
+        }.joined(separator: " · ")
+    }
+
+    private static func property(_ entry: io_registry_entry_t, _ key: String) -> Any? {
+        IORegistryEntryCreateCFProperty(entry, key as CFString, kCFAllocatorDefault, 0)?.takeRetainedValue()
     }
 
     private static func productName() -> String? {
         let entry = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/product")
         guard entry != 0 else { return nil }
         defer { IOObjectRelease(entry) }
-        guard let data = IORegistryEntryCreateCFProperty(entry, "product-name" as CFString, kCFAllocatorDefault, 0)?
-            .takeRetainedValue() as? Data else { return nil }
+        guard let data = property(entry, "product-name") as? Data else { return nil }
         return String(decoding: data.prefix { $0 != 0 }, as: UTF8.self)
     }
 
