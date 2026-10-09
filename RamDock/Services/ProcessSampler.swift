@@ -1,22 +1,21 @@
 import AppKit
 import Darwin
-import Observation
 
 /// Reads CPU time and memory footprint of every process readable by the current
 /// user via libproc. CPU % is the delta of user+system time between two samples,
 /// so the first sample of a new process shows 0.
-@Observable
 final class ProcessSampler {
     private(set) var entries: [ProcessEntry] = []
+    var onUpdate: (() -> Void)?
 
     private struct Sample { let cpuNanos: UInt64; let startTime: UInt64 }
 
-    @ObservationIgnored private var previous: [pid_t: Sample] = [:]
-    @ObservationIgnored private var previousWall: UInt64 = 0
-    @ObservationIgnored private var names: [pid_t: (start: UInt64, name: String, isApp: Bool)] = [:]
-    @ObservationIgnored private var timer: Timer?
-    @ObservationIgnored private let queue = DispatchQueue(label: "ramdock.sampler", qos: .utility)
-    @ObservationIgnored private let timebase: (numer: UInt64, denom: UInt64) = {
+    private var previous: [pid_t: Sample] = [:]
+    private var previousWall: UInt64 = 0
+    private var names: [pid_t: (start: UInt64, name: String, isApp: Bool)] = [:]
+    private var timer: Timer?
+    private let queue = DispatchQueue(label: "ramdock.sampler", qos: .utility)
+    private let timebase: (numer: UInt64, denom: UInt64) = {
         var info = mach_timebase_info_data_t()
         mach_timebase_info(&info)
         return (UInt64(info.numer), UInt64(info.denom))
@@ -50,14 +49,22 @@ final class ProcessSampler {
     }
 
     func refresh() {
+        // One LaunchServices query per refresh for the ~100 registered apps; asking
+        // NSRunningApplication(processIdentifier:) for each of ~600 pids left ~30 MB behind.
+        let apps = Dictionary(NSWorkspace.shared.runningApplications.map {
+            ($0.processIdentifier, (name: $0.localizedName, isApp: $0.activationPolicy == .regular))
+        }, uniquingKeysWith: { first, _ in first })
         queue.async { [weak self] in
             guard let self else { return }
-            let list = self.sample()
-            DispatchQueue.main.async { self.entries = list }
+            let list = self.sample(apps: apps)
+            DispatchQueue.main.async {
+                self.entries = list
+                self.onUpdate?()
+            }
         }
     }
 
-    private func sample() -> [ProcessEntry] {
+    private func sample(apps: [pid_t: (name: String?, isApp: Bool)]) -> [ProcessEntry] {
         let count = proc_listallpids(nil, 0)
         guard count > 0 else { return [] }
         var pids = [pid_t](repeating: 0, count: Int(count) + 64)
@@ -87,7 +94,7 @@ final class ProcessSampler {
                 cpu = Double(cpuNanos - prev.cpuNanos) / wallDelta * 100
             }
 
-            let label = name(for: pid, start: start)
+            let label = name(for: pid, start: start, app: apps[pid])
             result.append(ProcessEntry(pid: pid, name: label.name, cpu: cpu,
                                        memory: info.ri_phys_footprint, isApp: label.isApp))
         }
@@ -98,13 +105,13 @@ final class ProcessSampler {
         return result
     }
 
-    private func name(for pid: pid_t, start: UInt64) -> (name: String, isApp: Bool) {
+    private func name(for pid: pid_t, start: UInt64, app: (name: String?, isApp: Bool)?) -> (name: String, isApp: Bool) {
         if let cached = names[pid], cached.start == start { return (cached.name, cached.isApp) }
         var resolved: String
         var isApp = false
-        if let app = NSRunningApplication(processIdentifier: pid), let n = app.localizedName {
+        if let app, let n = app.name {
             resolved = n
-            isApp = app.activationPolicy == .regular
+            isApp = app.isApp
         } else {
             var buf = [CChar](repeating: 0, count: Int(MAXPATHLEN))
             if proc_pidpath(pid, &buf, UInt32(buf.count)) > 0 {

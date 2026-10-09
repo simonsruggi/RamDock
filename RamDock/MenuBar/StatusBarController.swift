@@ -1,25 +1,20 @@
 import AppKit
-import SwiftUI
 
-/// Status item with the live RAM/CPU percentages (an NSStatusItem rather than a
-/// MenuBarExtra, which renders its label as a monochrome template and drops colors).
-final class StatusBarController: NSObject, NSApplicationDelegate, NSPopoverDelegate {
+/// Status item with the live RAM/CPU percentages and the dropdown with the process list.
+final class StatusBarController: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private let popover = NSPopover()
+    private var panel: DropdownPanel?
+    private var outsideClickMonitor: Any?
     private let sampler = ProcessSampler()
     private let stats = SystemStats()
-    private var timer: Timer?
     private let readings = BarReadings()
+    private var timer: Timer?
     private var lastTitle: NSAttributedString?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.target = self
-        statusItem.button?.action = #selector(togglePopover)
-
-        popover.behavior = .transient
-        popover.contentSize = NSSize(width: 440, height: 520)
-        popover.delegate = self
+        statusItem.button?.action = #selector(togglePanel)
 
         sample()
         let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in self?.sample() }
@@ -31,50 +26,44 @@ final class StatusBarController: NSObject, NSApplicationDelegate, NSPopoverDeleg
                                                name: UserDefaults.didChangeNotification, object: nil)
     }
 
-    @objc private func togglePopover() {
+    @objc private func togglePanel() {
+        if panel != nil { closePanel() } else { openPanel() }
+    }
+
+    private func openPanel() {
         guard let button = statusItem.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            // Built on every open and dropped on close: a closed NSPopover keeps its
-            // view alive, so SwiftUI's onDisappear never fires and nothing is freed.
-            popover.contentViewController = NSHostingController(rootView: RootView(sampler: sampler, readings: readings))
-            sampler.start()
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
-            NSApp.activate()
+        // Built on every open and dropped on close, so a closed panel holds no memory.
+        let panel = DropdownPanel(content: PanelViewController(sampler: sampler, readings: readings))
+        panel.onCancel = { [weak self] in self?.closePanel() }
+        self.panel = panel
+        sampler.start()
+        panel.show(below: button)
+        // Clicks in other apps close it, like a menu; clicks in our own windows
+        // (the panel itself, the color panel) are local events and don't.
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            self?.closePanel()
         }
     }
 
-    func popoverDidClose(_ notification: Notification) {
+    private func closePanel() {
+        guard let panel else { return }
+        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
+        outsideClickMonitor = nil
+        panel.orderOut(nil)
+        self.panel = nil
         sampler.stop()
-        popover.contentViewController = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { malloc_zone_pressure_relief(nil, 0) }
     }
 
     private func sample() {
         readings.ram = stats.memoryUsage()
         readings.cpu = stats.cpuUsage()
         renderTitle()
+        readings.onChange?()
     }
 
     @objc private func renderTitle() {
-        let font = NSFont.monospacedDigitSystemFont(ofSize: BarStyle.fontSize, weight: .medium)
-        let label: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: BarStyle.labelColor ?? .labelColor]
-        let fixedValueColor = BarStyle.valueColor
-        func value(_ v: Double, _ kind: LoadColor.Kind) -> NSAttributedString {
-            NSAttributedString(string: String(format: "%.0f%%", v),
-                               attributes: [.font: font, .foregroundColor: fixedValueColor ?? LoadColor.color(for: v, kind: kind)])
-        }
-        let display = BarDisplay.current
-        let title = NSMutableAttributedString()
-        if display != .cpu {
-            title.append(NSAttributedString(string: "RAM ", attributes: label))
-            title.append(value(readings.ram, .memory))
-        }
-        if display != .memory {
-            title.append(NSAttributedString(string: display == .both ? "  CPU " : "CPU ", attributes: label))
-            title.append(value(readings.cpu, .cpu))
-        }
+        let title = BarTitle.make(ram: readings.ram, cpu: readings.cpu)
         guard title != lastTitle else { return }
         lastTitle = title
         statusItem.button?.attributedTitle = title
