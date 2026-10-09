@@ -9,6 +9,8 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     private let sampler = ProcessSampler()
     private let stats = SystemStats()
     private var timer: Timer?
+    private var lastRAM = 0.0
+    private var lastCPU = 0.0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -17,13 +19,16 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
 
         popover.behavior = .transient
         popover.contentSize = NSSize(width: 440, height: 520)
-        popover.contentViewController = NSHostingController(rootView: ProcessListView(sampler: sampler))
+        popover.contentViewController = NSHostingController(rootView: RootView(sampler: sampler))
 
-        updateTitle()
-        let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in self?.updateTitle() }
+        sample()
+        let t = Timer(timeInterval: 3, repeats: true) { [weak self] _ in self?.sample() }
         t.tolerance = 0.5
         RunLoop.main.add(t, forMode: .common)
         timer = t
+
+        NotificationCenter.default.addObserver(self, selector: #selector(renderTitle),
+                                               name: UserDefaults.didChangeNotification, object: nil)
     }
 
     @objc private func togglePopover() {
@@ -37,19 +42,29 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func updateTitle() {
-        let ram = stats.memoryUsage()
-        let cpu = stats.cpuUsage()
+    private func sample() {
+        lastRAM = stats.memoryUsage()
+        lastCPU = stats.cpuUsage()
+        renderTitle()
+    }
+
+    @objc private func renderTitle() {
         let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         let label: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.labelColor]
         func value(_ v: Double, _ kind: LoadColor.Kind) -> NSAttributedString {
             NSAttributedString(string: String(format: "%.0f%%", v),
                                attributes: [.font: font, .foregroundColor: LoadColor.color(for: v, kind: kind)])
         }
-        let title = NSMutableAttributedString(string: "RAM ", attributes: label)
-        title.append(value(ram, .memory))
-        title.append(NSAttributedString(string: "  CPU ", attributes: label))
-        title.append(value(cpu, .cpu))
+        let display = BarDisplay.current
+        let title = NSMutableAttributedString()
+        if display != .cpu {
+            title.append(NSAttributedString(string: "RAM ", attributes: label))
+            title.append(value(lastRAM, .memory))
+        }
+        if display != .memory {
+            title.append(NSAttributedString(string: display == .both ? "  CPU " : "CPU ", attributes: label))
+            title.append(value(lastCPU, .cpu))
+        }
         statusItem.button?.attributedTitle = title
     }
 }

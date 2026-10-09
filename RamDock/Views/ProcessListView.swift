@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProcessListView: View {
     let sampler: ProcessSampler
+    let onSettings: () -> Void
     @AppStorage("sortKey") private var sortKey: SortKey = .memory
     @State private var search = ""
     @State private var visible: [ProcessEntry] = []
@@ -16,8 +17,11 @@ struct ProcessListView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(width: 110)
-                TextField("Cerca", text: $search)
+                TextField("Search", text: $search)
                     .textFieldStyle(.roundedBorder)
+                Button(action: onSettings) { Image(systemName: "gearshape") }
+                    .buttonStyle(.borderless)
+                    .help("Settings")
             }
             .padding(10)
             Divider()
@@ -41,7 +45,7 @@ struct ProcessListView: View {
                         .lineLimit(2)
                 }
                 Spacer()
-                Button("Esci") { NSApp.terminate(nil) }
+                Button("Quit RamDock") { NSApp.terminate(nil) }
                     .buttonStyle(.borderless)
                     .font(.system(size: 11))
             }

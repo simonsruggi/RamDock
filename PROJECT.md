@@ -12,3 +12,5 @@ App macOS da barra dei menu (in alto a destra, niente icona nel Dock: `LSUIEleme
 - Chiusura: ✕ = SIGTERM, ⌥+clic o menu contestuale "Forza chiusura" = SIGKILL.
 - Build: `./build-app.sh --install` → `build/RamDock.app` universale, firmata Developer ID se c'è, copiata in `/Applications`.
 - Icona: `swift icon/make-icon.swift out.png` → iconset → `RamDock/Resources/AppIcon.icns`.
+- Interfaccia **solo in inglese** (`CFBundleDevelopmentRegion` en). I nomi delle app vengono da `NSRunningApplication.localizedName`, quindi seguono la lingua di sistema (es. "Terminale").
+- **Settings** (ingranaggio accanto alla ricerca): cosa mostra la barra, `BarDisplay` = RAM and CPU / RAM only / CPU only, chiave `barDisplay` in UserDefaults. La barra si ridisegna subito via `UserDefaults.didChangeNotification` con gli ultimi valori campionati.

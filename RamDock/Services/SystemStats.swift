@@ -5,7 +5,7 @@ final class SystemStats {
     private var previousTicks: (busy: UInt64, total: UInt64)?
     private let totalMemory = Double(ProcessInfo.processInfo.physicalMemory)
 
-    /// "Memoria utilizzata" as in Activity Monitor: app memory + wired + compressed.
+    /// "Memory Used" as in Activity Monitor: app memory + wired + compressed.
     func memoryUsage() -> Double {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)

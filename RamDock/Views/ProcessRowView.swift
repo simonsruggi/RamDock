@@ -33,16 +33,16 @@ struct ProcessRowView: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(hovering ? .red : .secondary)
-            .help("Chiudi (⌥ clic per forzare)")
+            .help("Quit (⌥-click to force quit)")
         }
         .font(.system(size: 12).monospacedDigit())
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .contextMenu {
-            Button("Chiudi") { onKill(false) }
-            Button("Forza chiusura") { onKill(true) }
+            Button("Quit") { onKill(false) }
+            Button("Force Quit") { onKill(true) }
             Divider()
-            Button("Copia PID") {
+            Button("Copy PID") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString("\(entry.pid)", forType: .string)
             }
