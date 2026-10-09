@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "ProcDock",
+    name: "RamDock",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "ProcDock", path: "ProcDock", exclude: ["Info.plist", "Resources"]),
+        .executableTarget(name: "RamDock", path: "RamDock", exclude: ["Info.plist", "Resources"]),
     ]
 )

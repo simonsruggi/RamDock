@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ProcessListView: View {
     let sampler: ProcessSampler
-    @AppStorage("sortKey") private var sortKey: SortKey = .cpu
+    @AppStorage("sortKey") private var sortKey: SortKey = .memory
     @State private var search = ""
     @State private var visible: [ProcessEntry] = []
     @State private var errorMessage: String?
@@ -18,9 +18,6 @@ struct ProcessListView: View {
                 .frame(width: 110)
                 TextField("Cerca", text: $search)
                     .textFieldStyle(.roundedBorder)
-                Text(String(format: "CPU %.0f%%", sampler.totalCPU / Double(ProcessInfo.processInfo.activeProcessorCount)))
-                    .font(.system(size: 12).monospacedDigit())
-                    .foregroundStyle(.secondary)
             }
             .padding(10)
             Divider()
@@ -34,6 +31,7 @@ struct ProcessListView: View {
                 }
                 .padding(.vertical, 4)
             }
+            .defaultScrollAnchor(.top)
             Divider()
             HStack {
                 if let errorMessage {
@@ -50,7 +48,7 @@ struct ProcessListView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
-        .onAppear { sampler.start() }
+        .onAppear { sampler.start(); rebuild() }
         .onDisappear { sampler.stop() }
         .onChange(of: sampler.entries) { rebuild() }
         .onChange(of: sortKey) { rebuild() }

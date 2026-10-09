@@ -11,7 +11,7 @@ struct ProcessEntry: Identifiable, Equatable {
 }
 
 enum SortKey: String, CaseIterable, Identifiable {
-    case cpu = "CPU"
     case memory = "RAM"
+    case cpu = "CPU"
     var id: String { rawValue }
 }
