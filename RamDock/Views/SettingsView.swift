@@ -3,6 +3,9 @@ import SwiftUI
 struct SettingsView: View {
     let onDone: () -> Void
     @AppStorage(BarDisplay.defaultsKey) private var barDisplay: BarDisplay = .both
+    @AppStorage(BarStyle.fontSizeKey) private var fontSize = BarStyle.defaultFontSize
+    @AppStorage(BarStyle.labelColorKey) private var labelColor = ""
+    @AppStorage(BarStyle.valueColorKey) private var valueColor = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -17,13 +20,22 @@ struct SettingsView: View {
             .padding(10)
             Divider()
             Form {
-                Picker("Menu bar", selection: $barDisplay) {
-                    ForEach(BarDisplay.allCases) { Text($0.label).tag($0) }
+                Section("Menu bar") {
+                    Picker("Show", selection: $barDisplay) {
+                        ForEach(BarDisplay.allCases) { Text($0.label).tag($0) }
+                    }
+                    LabeledContent("Text size") {
+                        HStack {
+                            Slider(value: $fontSize, in: BarStyle.fontSizeRange, step: 1)
+                            Text("\(Int(fontSize)) pt").monospacedDigit().frame(width: 40, alignment: .trailing)
+                        }
+                    }
+                    ColorSettingRow(title: "Label color", automaticLabel: "System", hex: $labelColor)
+                    ColorSettingRow(title: "Value color", automaticLabel: "By load", hex: $valueColor)
                 }
-                .pickerStyle(.radioGroup)
+                MacInfoSection()
             }
             .formStyle(.grouped)
-            Spacer()
         }
     }
 }

@@ -49,11 +49,12 @@ final class StatusBarController: NSObject, NSApplicationDelegate {
     }
 
     @objc private func renderTitle() {
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-        let label: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.labelColor]
+        let font = NSFont.monospacedDigitSystemFont(ofSize: BarStyle.fontSize, weight: .medium)
+        let label: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: BarStyle.labelColor ?? .labelColor]
+        let fixedValueColor = BarStyle.valueColor
         func value(_ v: Double, _ kind: LoadColor.Kind) -> NSAttributedString {
             NSAttributedString(string: String(format: "%.0f%%", v),
-                               attributes: [.font: font, .foregroundColor: LoadColor.color(for: v, kind: kind)])
+                               attributes: [.font: font, .foregroundColor: fixedValueColor ?? LoadColor.color(for: v, kind: kind)])
         }
         let display = BarDisplay.current
         let title = NSMutableAttributedString()
