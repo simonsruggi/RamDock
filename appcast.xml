@@ -1,0 +1,31 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+    <channel>
+        <title>RamDock</title>
+        <link>https://github.com/simonsruggi/RamDock</link>
+        <description>RamDock update feed</description>
+        <language>en</language>
+        <item>
+            <title>Version 1.0.0</title>
+            <pubDate>Fri, 09 Oct 2026 02:49:59 +0200</pubDate>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+<h3>First release</h3>
+<ul>
+<li><b>RAM and CPU in the menu bar</b> — system-wide usage, colored from green to red as the load rises.</li>
+<li><b>Every process, one click away</b> — CPU and memory per process, sorted by RAM or CPU, searchable by name or PID.</li>
+<li><b>Quit what's eating your Mac</b> — the ✕ quits a process; ⌥-click or right-click → Force Quit kills it.</li>
+<li><b>Make it yours</b> — RAM, CPU or both, text size, label and value colors, with a live preview.</li>
+<li><b>This Mac</b> — model, chip, CPU and GPU cores, memory, storage, macOS and uptime at a glance.</li>
+<li><b>Featherweight</b> — pure AppKit, ~13 MB at launch, near-zero CPU while the panel is closed.</li>
+</ul>
+            ]]></description>
+            <enclosure url="https://github.com/simonsruggi/RamDock/releases/download/v1.0.0/RamDock.zip"
+                       type="application/octet-stream"
+                       sparkle:edSignature="oGA+k3+0JG8FaciPM9nHzpopq3yUnDJRlyhzH6vcZcYi3wTyMEGe8m0xx0G4DmLbNqGs2ioSW+DAg633lLelAQ=="
+                       length="1576109"/>
+        </item>
+    </channel>
+</rss>
