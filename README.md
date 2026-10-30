@@ -33,6 +33,7 @@ brew install --cask simonsruggi/tap/ramdock
 - [Features](#features)
 - [Screenshots](#screenshots)
 - [Install](#install)
+- [Use it with Claude and other AI assistants (MCP)](#use-it-with-claude-and-other-ai-assistants-mcp)
 - [How the numbers are measured](#how-the-numbers-are-measured)
 - [How light is it](#how-light-is-it)
 - [Privacy](#privacy)
@@ -83,6 +84,44 @@ brew install --cask simonsruggi/tap/ramdock
 RamDock lives in the menu bar only — there's no Dock icon. Turn on **Settings → Open at login** to have it start with your Mac. Updates are checked automatically; **Settings → Check for Updates…** checks right away.
 
 Requires macOS 14 Sonoma or later.
+
+## Use it with Claude and other AI assistants (MCP)
+
+RamDock 1.1.0 and later is also an [MCP server](https://modelcontextprotocol.io): AI assistants that support the Model Context Protocol can read its data and answer questions about it.
+
+| Tool | What it returns |
+|---|---|
+| `get_system_usage` | Memory used, total and swap, CPU load, model, chip, macOS, uptime, free disk |
+| `list_top_processes` | The processes using the most RAM or CPU right now, optionally only apps |
+
+Try asking:
+
+- *"Why is my Mac slow right now?"*
+- *"Which apps are using the most memory?"*
+- *"Is my Mac swapping? How much RAM is free?"*
+
+**Claude Code**
+
+```bash
+claude mcp add ramdock -- /Applications/RamDock.app/Contents/MacOS/RamDock --mcp
+```
+
+**Claude Desktop, Cursor and other MCP clients** — add this to the client's MCP config (Claude Desktop: *Settings → Developer → Edit Config*; Cursor: `~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "ramdock": {
+      "command": "/Applications/RamDock.app/Contents/MacOS/RamDock",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+The menu bar app doesn't need to be running: the client starts RamDock in the background with `--mcp`, without any window or menu bar icon.
+
+Everything is measured on the spot on your Mac. The tools only read: an AI can't quit or kill processes through RamDock.
 
 ## How the numbers are measured
 

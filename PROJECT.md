@@ -47,6 +47,13 @@ Measured with `footprint`:
 
 Result: ~13 MB at launch, ~27–35 MB after using the panel, ~0.15 s of CPU per minute while closed.
 
+## MCP server (`--mcp`)
+
+Launched with `--mcp`, the binary skips the UI and the Sparkle updater (`MCPServer.requested`) and runs a Model Context Protocol server over stdio: newline-delimited JSON-RPC, written by hand in `MCP/MCPServer.swift` with no dependencies. The file is identical in RamDock, MRRDock and StockDock: change it in one and copy it to the others. Requests are read on a background thread while `dispatchMain()` keeps the main queue free, so tools can await `@MainActor` services through `MCPServer.wait`.
+
+All tools are read-only and never save the app's data file. Tools in `MCP/RamDockTools.swift` sample the system on each call (two samples one second apart for CPU).
+Check with the official client: `npx @modelcontextprotocol/inspector --cli <binary> --mcp --method tools/list`.
+
 ## Build and release
 
 - `./build-app.sh [--install]` → universal `build/RamDock.app`, signed with a Developer ID when available (ad-hoc otherwise), optionally copied to `/Applications`.

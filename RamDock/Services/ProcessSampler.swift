@@ -64,7 +64,7 @@ final class ProcessSampler {
         }
     }
 
-    private func sample(apps: [pid_t: (name: String?, isApp: Bool)]) -> [ProcessEntry] {
+    func sample(apps: [pid_t: (name: String?, isApp: Bool)]) -> [ProcessEntry] {
         let count = proc_listallpids(nil, 0)
         guard count > 0 else { return [] }
         var pids = [pid_t](repeating: 0, count: Int(count) + 64)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- **MCP server**: Claude, Cursor and other MCP clients can ask RamDock about memory, CPU and the heaviest processes (`RamDock --mcp`). Read-only: an AI can't quit processes
+
 ## 1.0.0
 
 - System RAM and CPU usage in the menu bar, colored from green to red as the load rises
