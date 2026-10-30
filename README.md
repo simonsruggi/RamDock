@@ -38,6 +38,7 @@ brew install --cask simonsruggi/tap/ramdock
 - [Privacy](#privacy)
 - [Build from source](#build-from-source)
 - [FAQ](#faq)
+- [More open source Mac apps](#more-open-source-mac-apps)
 - [License](#license)
 
 ## Why RamDock
@@ -132,6 +133,10 @@ macOS uses free memory for caches on purpose. RamDock reports *Memory Used* the 
 
 **Is RamDock a free alternative to iStat Menus or Stats?**
 For RAM and CPU, yes: RamDock focuses on those two numbers and on quitting the process behind them, and stays much smaller. If you need network, disk, sensors or battery graphs, those apps cover more.
+
+## More open source Mac apps
+
+Looking for other free, open source apps for your Mac? I keep **[Awesome Mac Open Source](https://github.com/simonsruggi/awesome-mac-open-source)**: 1,000+ maintained macOS apps sorted by GitHub stars, with the Homebrew command to install each one, refreshed every week.
 
 ## License
 
