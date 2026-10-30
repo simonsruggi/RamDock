@@ -6,26 +6,22 @@
         <description>RamDock update feed</description>
         <language>en</language>
         <item>
-            <title>Version 1.0.0</title>
-            <pubDate>Fri, 09 Oct 2026 02:49:59 +0200</pubDate>
-            <sparkle:version>1</sparkle:version>
-            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <title>Version 1.1.0</title>
+            <pubDate>Fri, 30 Oct 2026 21:25:43 +0100</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <description><![CDATA[
-<h3>First release</h3>
+<h3>Ask your AI assistant</h3>
 <ul>
-<li><b>RAM and CPU in the menu bar</b> — system-wide usage, colored from green to red as the load rises.</li>
-<li><b>Every process, one click away</b> — CPU and memory per process, sorted by RAM or CPU, searchable by name or PID.</li>
-<li><b>Quit what's eating your Mac</b> — the ✕ quits a process; ⌥-click or right-click → Force Quit kills it.</li>
-<li><b>Make it yours</b> — RAM, CPU or both, text size, label and value colors, with a live preview.</li>
-<li><b>This Mac</b> — model, chip, CPU and GPU cores, memory, storage, macOS and uptime at a glance.</li>
-<li><b>Featherweight</b> — pure AppKit, ~13 MB at launch, near-zero CPU while the panel is closed.</li>
+<li><b>MCP server</b> — Claude, Cursor and other MCP clients can now ask RamDock how much memory and CPU your Mac is using and which processes are the heaviest. Set it up in one line: see “Use it with Claude” in the README.</li>
+<li><b>Read-only</b> — an AI can look, but it can't quit or kill anything through RamDock.</li>
 </ul>
             ]]></description>
-            <enclosure url="https://github.com/simonsruggi/RamDock/releases/download/v1.0.0/RamDock.zip"
+            <enclosure url="https://github.com/simonsruggi/RamDock/releases/download/v1.1.0/RamDock.zip"
                        type="application/octet-stream"
-                       sparkle:edSignature="oGA+k3+0JG8FaciPM9nHzpopq3yUnDJRlyhzH6vcZcYi3wTyMEGe8m0xx0G4DmLbNqGs2ioSW+DAg633lLelAQ=="
-                       length="1576109"/>
+                       sparkle:edSignature="HjSci/VYmdufjNyj0rUSL1/dpOAv/fK8lS/BSksOpk6gtDPCxoGG9YXIqWRoBUGLJYjsxD9VuNq+YS4oIxFHCg=="
+                       length="1623024"/>
         </item>
     </channel>
 </rss>
